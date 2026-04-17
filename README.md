@@ -1,6 +1,7 @@
 # Git Deploy 🚀
 
 > Um script para automatizar deploys no GitHub de forma simples, fluida e à prova de esquecimentos.
+
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Shell](https://img.shields.io/badge/shell-bash-informational.svg)
