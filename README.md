@@ -92,7 +92,7 @@ gitsend
 - Optionally create version tags
 
 ## Roadmap
-
+```
 [X] Automated git push
 [X] Interactive deployment checklist
 [X] Commit message standardization
@@ -103,7 +103,7 @@ gitsend
 [ ] Fast deploy mode
 [ ] Silent deploy mode
 [ ] Multi-repository support
-
+```
 ---
 
 ## Example Workflow
