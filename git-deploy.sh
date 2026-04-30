@@ -110,11 +110,12 @@ fi
 
 echo -e "\n--- Version Management ---"
 
-# Retrieve the latest tag
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+# Retrieve the latest tag (semantic sorting)
+LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
 
-if [ "$LAST_TAG" == "v0.0.0" ]; then
-    echo -e "${YELLOW}No previous tags found.${NC}"
+if [ -z "$LAST_TAG" ]; then
+    LAST_TAG="v0.0.0"
+    echo -e "${YELLOW}No previous tags found. Starting at v0.0.0${NC}"
 else
     echo -e "Last tag found: ${CYAN}$LAST_TAG${NC}"
 fi
@@ -148,9 +149,14 @@ case $VERSION_OPTION in
 esac
 
 if [ ! -z "$NEW_TAG" ]; then
-    git tag -a "$NEW_TAG" -m "Release $NEW_TAG"
-    echo -e "${YELLOW}Tag $NEW_TAG created locally.${NC}"
+    # Tenta criar a tag. Se falhar (!), aborta o script na hora.
+    if ! git tag -a "$NEW_TAG" -m "Release $NEW_TAG"; then
+        echo -e "${RED}❌ Erro: Falha ao criar a tag '$NEW_TAG'. Provavelmente ela já existe.${NC}"
+        echo -e "${YELLOW}Dica: Rode 'git tag' para listar as tags atuais e verifique o versionamento.${NC}"
+        exit 1
+    fi
     
+    echo -e "${YELLOW}Tag $NEW_TAG created locally.${NC}"
     push_tag="y" 
 else
     push_tag="n"
