@@ -2,7 +2,7 @@
 
 > A lightweight Git deployment script designed to automate commits, enforce best practices, and prevent common deployment mistakes.
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Shell](https://img.shields.io/badge/shell-bash-informational.svg)
 
@@ -87,13 +87,14 @@ gitsend
 - Display modified files
 - Ask for commit message
 - Perform security checks
-- Validate remote repository alignment (v1.1.1)
+- Validate remote repository alignment (Safety Lock)
+- Interactively select version bump (patch, minor, major)
 - Confirm deployment
 - Push changes
 - Optionally create version tags
 
 ## Roadmap
-```
+
 [X] Automated git push
 [X] Interactive deployment checklist
 [X] Commit message standardization
@@ -105,7 +106,7 @@ gitsend
 [ ] Fast deploy mode
 [ ] Silent deploy mode
 [ ] Multi-repository support
-```
+
 ---
 
 ## Example Workflow

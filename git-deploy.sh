@@ -7,25 +7,23 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}--- Starting Push/Tag Automation ---${NC}\n"
+echo -e "${YELLOW}--- Git Deployment Automation (v1.2.0) ---${NC}\n"
 
-# 1. Check if inside a git repository
+# Check if current directory is a Git repository
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    echo -e "${RED}Warning: You are not inside a Git repository!${NC}"
-    echo -e "${GREEN}Would you like to initialize a new repository here? (y/n)${NC}"
-    read init_git
+    echo -e "${RED}Error: Not inside a Git repository!${NC}"
+    read -p "Initialize a new repository in this folder? (y/n): " init_git
     
     if [ "$init_git" == "y" ]; then
         git init
         git branch -M main
         echo -e "${YELLOW}Local repository initialized successfully.${NC}"
         
-        echo -e "${GREEN}Paste the remote repository URL (e.g., https://github.com/user/repo.git) or press ENTER to skip:${NC}"
-        read remote_url
+        read -p "Enter remote repository URL (or press ENTER to skip): " remote_url
         
         if [ ! -z "$remote_url" ]; then
             git remote add origin "$remote_url"
-            echo -e "${YELLOW}Remote repository connected.${NC}\n"
+            echo -e "${YELLOW}Remote origin connected.${NC}\n"
         else
             echo -e "${RED}No remote added. Final push will fail if origin is not set.${NC}\n"
         fi
@@ -89,43 +87,42 @@ else
   echo -e "${GREEN}No .env file detected.${NC}"
 fi
 
-# 3. Show current status
+# Display modified files
 echo -e "\n${GREEN}Modified Files:${NC}"
 git status -s
 
-# 4. Stage files
-echo -e "\n${YELLOW}Staging files (git add .)...${NC}"
+# Stage changes
+echo -e "\n${YELLOW}Staging all changes...${NC}"
 git add .
 
-# 5. Commit message
-echo -e "${GREEN}Enter commit message (leave blank for automatic timestamp):${NC}"
-read commit_message
+# Prompt for commit message
+read -p "Enter commit message (blank for auto-timestamp): " commit_message
 
 if [ -z "$commit_message" ]; then
     commit_message="Automated update: $(date +'%Y-%m-%d %H:%M:%S')"
 fi
 
-git commit -m "$commit_message"
+# Execute commit with safety check
+if ! git commit -m "$commit_message"; then
+    echo -e "${RED}Error: Commit failed. Are there any changes to push?${NC}"
+    exit 1
+fi
 
-echo -e "\nVersion Management"
+echo -e "\n--- Version Management ---"
 
-# Get last tag
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+# Retrieve the latest tag
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
-if [ -z "$LAST_TAG" ]; then
-    echo -e "${YELLOW}No previous tags found. Starting at v0.0.0${NC}"
-    LAST_TAG="v0.0.0"
+if [ "$LAST_TAG" == "v0.0.0" ]; then
+    echo -e "${YELLOW}No previous tags found.${NC}"
 else
     echo -e "Last tag found: ${CYAN}$LAST_TAG${NC}"
 fi
 
-# Remove "v" prefix
+# Parse version components
 VERSION=${LAST_TAG#v}
-
-# Split version
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
-# Ensure numeric values
 MAJOR=${MAJOR:-0}
 MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
@@ -159,29 +156,26 @@ else
     push_tag="n"
 fi
 
-# 7. Push to GitHub
+# Final push to remote
 if ! git remote | grep -q "origin"; then
     echo -e "${RED}Error: No remote named 'origin' found. Push aborted.${NC}"
     exit 1
 fi
 
-echo -e "\n${YELLOW}Pushing to GitHub...${NC}"
-current_branch=$(git rev-parse --abbrev-ref HEAD)
+echo -e "\n${YELLOW}Pushing changes to origin/${BRANCH}...${NC}"
 
-# Blinda o push da branch
-if ! git push origin "$current_branch"; then
-    echo -e "${RED}❌ Falha Crítica: Não foi possível enviar o código (Push falhou).${NC}"
-    echo -e "${YELLOW}Dica: Tente rodar 'git pull --rebase' para sincronizar com a nuvem antes de tentar novamente.${NC}"
+if ! git push origin "$BRANCH"; then
+    echo -e "${RED}CRITICAL: Push failed.${NC}"
+    echo -e "${YELLOW}Hint: Run 'git pull --rebase' to sync before trying again.${NC}"
     exit 1
 fi
 
-# Blinda o push das tags
 if [ "$push_tag" == "y" ]; then
-    echo -e "${YELLOW}Pushing tags...${NC}"
+    echo -e "${YELLOW}Pushing tags to remote...${NC}"
     if ! git push origin --tags; then
-        echo -e "${RED}❌ Falha Crítica: O código subiu, mas falhou ao enviar as Tags.${NC}"
+        echo -e "${RED}Error: Tags failed to push.${NC}"
         exit 1
     fi
 fi
 
-echo -e "\n${GREEN}--- 🎉 Deploy concluído com sucesso ---${NC}"
+echo -e "\n${GREEN}--- 🎉 Deployment successful ---${NC}"
