@@ -35,7 +35,7 @@ if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     fi
 fi
 
-# 2. Pre-flight Checklist
+# Pre-deployment Checklist
 echo -e "${CYAN}================ PRE-DEPLOY CHECKLIST =================${NC}"
 echo -e "Before pushing your code, please verify:"
 echo -e " [ ] ${YELLOW}.gitignore${NC} is configured? (node_modules, OS files, etc.)"
@@ -45,30 +45,43 @@ echo -e " [ ] ${YELLOW}README.md${NC} is up to date?"
 echo -e " [ ] Removed all debug 'console.log' or 'print' statements?"
 echo -e "${CYAN}=======================================================${NC}\n"
 
-# User confirmation
-read -p "Ready for deploy? Press [ENTER] to continue or [CTRL+C] to abort..."
+read -p "Proceed with deployment? Press [ENTER] to continue or [CTRL+C] to abort..."
 
-# Capture current folder name and branch
+# Identify repository metadata
 REPO_NAME=$(basename "$PWD")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 
-echo -e "\nRepository: ${CYAN}$REPO_NAME${NC}"
-echo -e "Branch: ${CYAN}$BRANCH${NC}\n"
+# Validate remote repository alignment (Safety Lock)
+REMOTE_URL=$(git remote get-url origin 2>/dev/null)
+if [ ! -z "$REMOTE_URL" ]; then
+    # Extracts repo name from URL (removes .git and path)
+    REMOTE_REPO_NAME=$(basename "$REMOTE_URL" .git)
+    
+    if [ "$REPO_NAME" != "$REMOTE_REPO_NAME" ]; then
+        echo -e "${RED}FATAL ERROR: Remote mismatch detected!${NC}"
+        echo -e "Local folder: ${YELLOW}$REPO_NAME${NC}"
+        echo -e "Remote repository: ${YELLOW}$REMOTE_REPO_NAME${NC}"
+        echo -e "${RED}Deployment stopped to prevent pushing to the wrong repository.${NC}"
+        exit 1
+    fi
+fi
 
-# .env Security Verification
-echo "Checking .env security..."
+echo -e "\nTarget Repository: ${CYAN}$REPO_NAME${NC}"
+echo -e "Target Branch: ${CYAN}$BRANCH${NC}\n"
+
+# .env security verification
+echo "Performing security checks..."
 
 if [ -f ".env" ]; then
   if [ -f ".gitignore" ] && grep -q "^\.env" .gitignore; then
-    echo -e "${GREEN}OK: .env found and ignored in .gitignore${NC}"
+    echo -e "${GREEN}OK: .env is ignored in .gitignore${NC}"
   else
-    echo -e "${RED}WARNING: .env file exists but is NOT in .gitignore!${NC}"
+    echo -e "${RED}WARNING: .env file detected but NOT found in .gitignore!${NC}"
   fi
 
-  # Check if .env is already tracked
   if git ls-files --error-unmatch .env > /dev/null 2>&1; then
-    echo -e "${RED}FATAL ERROR: .env is already being tracked by Git!${NC}"
-    echo -e "${RED}Remove it from cache before proceeding:${NC}"
+    echo -e "${RED}FATAL ERROR: .env is currently tracked by Git!${NC}"
+    echo -e "${RED}Remove it from cache before deployment:${NC}"
     echo -e "${YELLOW}git rm --cached .env${NC}"
     exit 1
   fi
@@ -118,9 +131,9 @@ MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
 
 # Calculate next versions
-PATCH_VERSION="v$MAJOR.$MINOR.$((PATCH+1))"
-MINOR_VERSION="v$MAJOR.$((MINOR+1)).0"
-MAJOR_VERSION="v$((MAJOR+1)).0.0"
+PATCH_VERSION="v$MAJOR.$MINOR.$((PATCH + 1))"
+MINOR_VERSION="v$MAJOR.$((MINOR + 1)).0"
+MAJOR_VERSION="v$((MAJOR + 1)).0.0"
 
 echo -e "\n${GREEN}Select version bump:${NC}"
 echo "1) Patch (Bug fixes)   -> $PATCH_VERSION"
@@ -155,15 +168,20 @@ fi
 echo -e "\n${YELLOW}Pushing to GitHub...${NC}"
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
+# Blinda o push da branch
 if ! git push origin "$current_branch"; then
-    echo -e "${RED}Failed to push to remote.${NC}"
+    echo -e "${RED}❌ Falha Crítica: Não foi possível enviar o código (Push falhou).${NC}"
+    echo -e "${YELLOW}Dica: Tente rodar 'git pull --rebase' para sincronizar com a nuvem antes de tentar novamente.${NC}"
     exit 1
 fi
 
-# Push tags if applicable
+# Blinda o push das tags
 if [ "$push_tag" == "y" ]; then
     echo -e "${YELLOW}Pushing tags...${NC}"
-    git push origin --tags
+    if ! git push origin --tags; then
+        echo -e "${RED}❌ Falha Crítica: O código subiu, mas falhou ao enviar as Tags.${NC}"
+        exit 1
+    fi
 fi
 
-echo -e "\n${GREEN}--- Deploy completed successfully ---${NC}"
+echo -e "\n${GREEN}--- 🎉 Deploy concluído com sucesso ---${NC}"
