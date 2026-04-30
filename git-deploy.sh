@@ -7,7 +7,7 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}--- Git Deployment Automation (v1.2.0) ---${NC}\n"
+echo -e "${YELLOW}--- Git Deployment Automation (v1.2.1) ---${NC}\n"
 
 # Check if current directory is a Git repository
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
